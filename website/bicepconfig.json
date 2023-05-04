@@ -1,0 +1,9 @@
+{
+    "moduleAliases": {
+      "br": {
+        "ToyCompanyRegistry": {
+          "registry": "bryant12138.azurecr.io"
+        }
+      }
+    }
+  }

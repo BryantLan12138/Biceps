@@ -1,0 +1,249 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.16.2.56959",
+      "templateHash": "5618040612677357474"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "westus3",
+      "metadata": {
+        "description": "The Azure region into which the resources should be deployed."
+      }
+    },
+    "appServiceAppName": {
+      "type": "string",
+      "defaultValue": "[format('toy-{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "The name of the App Service app."
+      }
+    },
+    "appServicePlanSkuName": {
+      "type": "string",
+      "defaultValue": "F1",
+      "metadata": {
+        "description": "The name of the App Service plan SKU."
+      }
+    }
+  },
+  "variables": {
+    "appServicePlanName": "toy-dog-plan"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "toy-dog-website",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appServiceAppName": {
+            "value": "[parameters('appServiceAppName')]"
+          },
+          "appServicePlanName": {
+            "value": "[variables('appServicePlanName')]"
+          },
+          "appServicePlanSkuName": {
+            "value": "[parameters('appServicePlanSkuName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.16.2.56959",
+              "templateHash": "11293635511783262474"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region into which the resources should be deployed."
+              }
+            },
+            "appServiceAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the App Service app."
+              }
+            },
+            "appServicePlanName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the App Service plan."
+              }
+            },
+            "appServicePlanSkuName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the App Service plan SKU."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2022-03-01",
+              "name": "[parameters('appServicePlanName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "[parameters('appServicePlanSkuName')]"
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2022-03-01",
+              "name": "[parameters('appServiceAppName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "httpsOnly": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "appServiceAppHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "The default host name of the App Service app."
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('appServiceAppName')), '2022-03-01').defaultHostName]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "toy-dog-cdn",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "httpsOnly": {
+            "value": true
+          },
+          "originHostName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'toy-dog-website'), '2022-09-01').outputs.appServiceAppHostName.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.16.2.56959",
+              "templateHash": "9691455915030451751"
+            }
+          },
+          "parameters": {
+            "originHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "The host name (address) of the origin server."
+              }
+            },
+            "profileName": {
+              "type": "string",
+              "defaultValue": "[format('cdn-{0}', uniqueString(resourceGroup().id))]",
+              "metadata": {
+                "description": "The name of the CDN profile."
+              }
+            },
+            "endpointName": {
+              "type": "string",
+              "defaultValue": "[format('endpoint-{0}', uniqueString(resourceGroup().id))]",
+              "metadata": {
+                "description": "The name of the CDN endpoint"
+              }
+            },
+            "httpsOnly": {
+              "type": "bool",
+              "metadata": {
+                "description": "Indicates whether the CDN endpoint requires HTTPS connections."
+              }
+            }
+          },
+          "variables": {
+            "originName": "my-origin"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cdn/profiles",
+              "apiVersion": "2022-11-01-preview",
+              "name": "[parameters('profileName')]",
+              "location": "global",
+              "sku": {
+                "name": "Standard_Microsoft"
+              }
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/endpoints",
+              "apiVersion": "2022-11-01-preview",
+              "name": "[format('{0}/{1}', parameters('profileName'), parameters('endpointName'))]",
+              "location": "global",
+              "properties": {
+                "originHostHeader": "[parameters('originHostName')]",
+                "isHttpAllowed": "[not(parameters('httpsOnly'))]",
+                "isHttpsAllowed": true,
+                "queryStringCachingBehavior": "IgnoreQueryString",
+                "contentTypesToCompress": [
+                  "text/plain",
+                  "text/html",
+                  "text/css",
+                  "application/x-javascript",
+                  "text/javascript"
+                ],
+                "isCompressionEnabled": true,
+                "origins": [
+                  {
+                    "name": "[variables('originName')]",
+                    "properties": {
+                      "hostName": "[parameters('originHostName')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('profileName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "endpointHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "The host name of the CDN endpoint."
+              },
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('profileName'), parameters('endpointName')), '2022-11-01-preview').hostName]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'toy-dog-website')]"
+      ]
+    }
+  ]
+}
